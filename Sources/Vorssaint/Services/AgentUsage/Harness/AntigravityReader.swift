@@ -51,6 +51,45 @@ enum AntigravityMetadata {
         }
         return nil
     }
+
+    static func isRunning(session: String) -> Bool {
+        guard !session.isEmpty else { return false }
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_close(db) }
+
+        var stmt: OpaquePointer?
+        let sql = "SELECT status, not_fully_idle FROM conversation_summaries WHERE conversation_id = ? LIMIT 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return false }
+        defer { sqlite3_finalize(stmt) }
+
+        sqlite3_bind_text(stmt, 1, (session as NSString).utf8String, -1, nil)
+        if sqlite3_step(stmt) == SQLITE_ROW {
+            let status = sqlite3_column_text(stmt, 0).map { String(cString: $0) } ?? ""
+            let idle = sqlite3_column_int(stmt, 1)
+            return status == "CASCADE_RUN_STATUS_RUNNING" || idle == 1
+        }
+        return false
+    }
+
+    static func runningSessionIDs() -> [String] {
+        var db: OpaquePointer?
+        guard sqlite3_open_v2(dbPath, &db, SQLITE_OPEN_READONLY, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_close(db) }
+
+        var stmt: OpaquePointer?
+        let sql = "SELECT conversation_id FROM conversation_summaries WHERE status = 'CASCADE_RUN_STATUS_RUNNING' OR not_fully_idle = 1"
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return [] }
+        defer { sqlite3_finalize(stmt) }
+
+        var ids: [String] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            if let id = sqlite3_column_text(stmt, 0).map({ String(cString: $0) }), !id.isEmpty {
+                ids.append(id)
+            }
+        }
+        return ids
+    }
 }
 
 /// Reads Antigravity transcript session logs.
@@ -77,8 +116,15 @@ struct AntigravityReader: AgentHarnessReader {
         case "PLANNER_RESPONSE":
             return parsePlannerResponse(json, date: date, state: &state, now: now)
 
-        case "GENERIC":
-            return state.turnOpen ? [.turnActive(date)] : []
+        case "GENERIC", "SYSTEM_MESSAGE":
+            if !state.turnOpen {
+                state.turnOpen = true
+                return [.turnBegan(date),
+                        .turnContext(model: state.model.isEmpty ? "Gemini 3.8 Flash" : state.model,
+                                    project: state.project.isEmpty ? "Antigravity" : state.project),
+                        .turnActive(date)]
+            }
+            return [.turnActive(date)]
 
         default:
             return []
@@ -181,11 +227,23 @@ struct AntigravityReader: AgentHarnessReader {
         let toolCalls = json["tool_calls"] as? [[String: Any]] ?? []
         let status = json["status"] as? String ?? ""
         if status == "DONE" && toolCalls.isEmpty {
-            if state.turnOpen {
+            if AntigravityMetadata.isRunning(session: session) {
+                if !state.turnOpen {
+                    state.turnOpen = true
+                    entries.append(.turnBegan(date))
+                    entries.append(.turnContext(model: model, project: project))
+                }
+                entries.append(.turnActive(date))
+            } else if state.turnOpen {
                 state.turnOpen = false
                 entries.append(.turnEnded(date, completed: true, duration: nil))
             }
-        } else if state.turnOpen {
+        } else {
+            if !state.turnOpen {
+                state.turnOpen = true
+                entries.append(.turnBegan(date))
+                entries.append(.turnContext(model: model, project: project))
+            }
             entries.append(.turnActive(date))
         }
 

@@ -441,6 +441,15 @@ final class AgentUsageService: ObservableObject {
             if let mark = key.firstIndex(of: "#") { working.insert(String(key[..<mark])) }
         }
         var changed = false
+        if enabled.contains(.antigravity) {
+            for sessionID in AntigravityMetadata.runningSessionIDs() {
+                let path = home.appendingPathComponent(".gemini/antigravity/brain/\(sessionID)/.system_generated/logs/transcript.jsonl").path
+                working.insert(path)
+                if cursors[path] == nil {
+                    if read(path, provider: .antigravity) { changed = true }
+                }
+            }
+        }
         for (path, cursor) in cursors
         where working.contains(path) || now.timeIntervalSince(cursor.modified) < window {
             if cursor.provider == .opencode {

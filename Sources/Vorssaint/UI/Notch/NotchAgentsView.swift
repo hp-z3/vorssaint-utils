@@ -193,6 +193,35 @@ private struct NotchAgentChip: View {
     }
 }
 
+private struct AntigravityAccountButton: View {
+    @ObservedObject private var manager = AntigravityAccountManager.shared
+
+    var body: some View {
+        Button {
+            manager.switchAccount()
+        } label: {
+            HStack(spacing: 2.5) {
+                if manager.isSwitching {
+                    ProgressView().controlSize(.mini).scaleEffect(0.6).frame(width: 10, height: 10)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 8, weight: .semibold))
+                }
+                Text("账号 \(manager.activeProfileIndex)")
+                    .font(.system(size: 9, weight: .semibold))
+            }
+            .foregroundStyle(Color.white.opacity(0.85))
+            .lineLimit(1)
+            .padding(.horizontal, 5)
+            .padding(.vertical, 1.5)
+            .background(Color.white.opacity(0.14), in: Capsule(style: .continuous))
+        }
+        .buttonStyle(.plain)
+        .disabled(manager.isSwitching)
+        .help("一键切换 Antigravity 账号（当前：账号 \(manager.activeProfileIndex)\(manager.currentEmail.isEmpty ? "" : " · " + manager.currentEmail)）")
+    }
+}
+
 // MARK: Limits
 
 /// The share keeps its meaning at every width. A reset countdown uses spare
@@ -309,6 +338,7 @@ private struct NotchAgentLimitsCard: View {
                             }
                         } else {
                             if let plan = snapshot.plans[provider] { NotchAgentChip(text: plan.name, tint: provider.tint) }
+                            if provider == .antigravity { AntigravityAccountButton() }
                             if !snapshot.working(provider).isEmpty { NotchAgentPulse(tint: provider.tint, size: 5) }
                         }
                     }

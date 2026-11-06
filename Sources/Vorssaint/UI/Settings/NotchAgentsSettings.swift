@@ -54,6 +54,7 @@ struct NotchAgentsSettingsControls: View {
             providerRow(.antigravity, isOn: $antigravity)
             if claude { ClaudeAccountSettings() }
             if codex { CodexAccountsSettings() }
+            if antigravity { AntigravityAccountSettings() }
 
             Divider()
             Text(text.cardsTitle).font(.subheadline.weight(.medium))
@@ -335,5 +336,46 @@ private struct NotchAgentStripSample: View {
     private func reading(at now: Date) -> String {
         let snapshot = NotchAgentSupport.stripSampleSnapshot(usage.snapshot, provider: provider, focus: focus, now: now)
         return NotchAgentSupport.stripReading(snapshot, readout: readout, display: display, focus: focus, now: now)
+    }
+}
+
+struct AntigravityAccountSettings: View {
+    @ObservedObject private var manager = AntigravityAccountManager.shared
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(.secondary)
+                    .frame(width: 16)
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text("当前账号：账号 \(manager.activeProfileIndex)")
+                            .font(.callout.weight(.medium))
+                        if !manager.currentEmail.isEmpty {
+                            Text("(\(manager.currentEmail))")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    Text("自动切换 Google AI Pro 凭据并同步所有会话历史，通过本地代理 7890 启动。")
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+                Spacer(minLength: 8)
+                Button {
+                    manager.switchAccount()
+                } label: {
+                    if manager.isSwitching {
+                        ProgressView().controlSize(.small)
+                    } else {
+                        Text("切换至账号 \(manager.activeProfileIndex == 1 ? 2 : 1)")
+                    }
+                }
+                .disabled(manager.isSwitching)
+            }
+            .padding(.vertical, 4)
+            .padding(.leading, 24)
+        }
     }
 }
