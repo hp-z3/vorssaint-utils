@@ -193,32 +193,56 @@ private struct NotchAgentChip: View {
     }
 }
 
-private struct AntigravityAccountButton: View {
+private struct NotchAgentAntigravityTitle: View {
     @ObservedObject private var manager = AntigravityAccountManager.shared
+    let displayName: String
 
     var body: some View {
-        Button {
-            manager.switchAccount()
-        } label: {
-            HStack(spacing: 2.5) {
-                if manager.isSwitching {
-                    ProgressView().controlSize(.mini).scaleEffect(0.6).frame(width: 10, height: 10)
-                } else {
-                    Image(systemName: "arrow.triangle.2.circlepath")
-                        .font(.system(size: 8, weight: .semibold))
+        Menu {
+            Section("切换 Antigravity 账号") {
+                Button {
+                    if manager.activeProfileIndex != 1 {
+                        manager.switchTo(profile: 1)
+                    }
+                } label: {
+                    if manager.activeProfileIndex == 1 {
+                        Label("账号 1 (当前)\(manager.profile1Email.isEmpty ? "" : " · " + manager.profile1Email)", systemImage: "checkmark")
+                    } else {
+                        Text("切换至 账号 1\(manager.profile1Email.isEmpty ? "" : " · " + manager.profile1Email)")
+                    }
                 }
-                Text("账号 \(manager.activeProfileIndex)")
-                    .font(.system(size: 9, weight: .semibold))
+                Button {
+                    if manager.activeProfileIndex != 2 {
+                        manager.switchTo(profile: 2)
+                    }
+                } label: {
+                    if manager.activeProfileIndex == 2 {
+                        Label("账号 2 (当前)\(manager.profile2Email.isEmpty ? "" : " · " + manager.profile2Email)", systemImage: "checkmark")
+                    } else {
+                        Text("切换至 账号 2\(manager.profile2Email.isEmpty ? "" : " · " + manager.profile2Email)")
+                    }
+                }
             }
-            .foregroundStyle(Color.white.opacity(0.85))
-            .lineLimit(1)
-            .padding(.horizontal, 5)
-            .padding(.vertical, 1.5)
-            .background(Color.white.opacity(0.14), in: Capsule(style: .continuous))
+            Divider()
+            Button {
+                manager.relaunchWithProxy()
+            } label: {
+                Label("带代理重启 Antigravity (7890)", systemImage: "arrow.clockwise")
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text("\(displayName) · 账号 \(manager.activeProfileIndex)")
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.95))
+                    .lineLimit(1)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 7, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.45))
+            }
         }
-        .buttonStyle(.plain)
-        .disabled(manager.isSwitching)
-        .help("一键切换 Antigravity 账号（当前：账号 \(manager.activeProfileIndex)\(manager.currentEmail.isEmpty ? "" : " · " + manager.currentEmail)）")
+        .menuStyle(.borderlessButton)
+        .fixedSize()
+        .help("点击切换 Antigravity 账号")
     }
 }
 
@@ -319,31 +343,43 @@ private struct NotchAgentLimitsCard: View {
         let windows = windows
         NotchAgentCardChrome {
             VStack(alignment: .leading, spacing: 6) {
-                NotchAgentCardHeader(title: (account?.name ?? accountName).map { provider.displayName + " · " + $0 }
-                                        ?? provider.displayName,
-                                     symbol: provider.symbol, tint: provider.tint, provider: provider) {
-                    HStack(spacing: 4) {
-                        if let account {
-                            if let plan = account.plan { NotchAgentChip(text: plan, tint: provider.tint) }
-                            // A check waiting its turn shows as one under way.
-                            if account.checking {
-                                ProgressView().controlSize(.mini).scaleEffect(0.65).frame(width: 12, height: 12)
-                            } else {
-                                Button(action: account.refresh) {
-                                    Image(systemName: "arrow.clockwise").font(.system(size: 10))
-                                }
-                                .buttonStyle(.plain)
-                                .help(account.checkLabel)
-                                .accessibilityLabel(account.checkLabel)
-                            }
-                        } else {
+                if provider == .antigravity {
+                    NotchAgentCardHeader(title: "",
+                                         symbol: provider.symbol,
+                                         tint: provider.tint,
+                                         provider: provider,
+                                         titleView: AnyView(NotchAgentAntigravityTitle(displayName: provider.displayName))) {
+                        HStack(spacing: 4) {
                             if let plan = snapshot.plans[provider] { NotchAgentChip(text: plan.name, tint: provider.tint) }
-                            if provider == .antigravity { AntigravityAccountButton() }
                             if !snapshot.working(provider).isEmpty { NotchAgentPulse(tint: provider.tint, size: 5) }
                         }
                     }
+                } else {
+                    NotchAgentCardHeader(title: (account?.name ?? accountName).map { provider.displayName + " · " + $0 }
+                                            ?? provider.displayName,
+                                         symbol: provider.symbol, tint: provider.tint, provider: provider) {
+                        HStack(spacing: 4) {
+                            if let account {
+                                if let plan = account.plan { NotchAgentChip(text: plan, tint: provider.tint) }
+                                // A check waiting its turn shows as one under way.
+                                if account.checking {
+                                    ProgressView().controlSize(.mini).scaleEffect(0.65).frame(width: 12, height: 12)
+                                } else {
+                                    Button(action: account.refresh) {
+                                        Image(systemName: "arrow.clockwise").font(.system(size: 10))
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help(account.checkLabel)
+                                    .accessibilityLabel(account.checkLabel)
+                                }
+                            } else {
+                                if let plan = snapshot.plans[provider] { NotchAgentChip(text: plan.name, tint: provider.tint) }
+                                if !snapshot.working(provider).isEmpty { NotchAgentPulse(tint: provider.tint, size: 5) }
+                            }
+                        }
+                    }
+                    .help(account?.name ?? accountName ?? provider.displayName)
                 }
-                .help(account?.name ?? accountName ?? provider.displayName)
                 if let account {
                     let notes = NotchAgentSupport.accountNotes(
                         hasWindows: !windows.isEmpty, checking: account.checking, failure: account.failure,

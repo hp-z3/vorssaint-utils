@@ -116,6 +116,12 @@ final class AntigravityAccountManager: ObservableObject {
 
     /// Switches between Account 1 and Account 2.
     func switchAccount() {
+        let target = activeProfileIndex == 1 ? 2 : 1
+        switchTo(profile: target)
+    }
+
+    /// Switches specifically to a profile index.
+    func switchTo(profile targetIndex: Int) {
         guard !isSwitching else { return }
         isSwitching = true
 
@@ -135,7 +141,7 @@ final class AntigravityAccountManager: ObservableObject {
             Thread.sleep(forTimeInterval: 0.8)
 
             // 3. Switch index
-            let newIndex = self.activeProfileIndex == 1 ? 2 : 1
+            let newIndex = targetIndex
             let targetFolder = self.profileFolder(for: newIndex)
 
             if fm.fileExists(atPath: targetFolder.path) {
@@ -169,6 +175,25 @@ final class AntigravityAccountManager: ObservableObject {
                 self.isSwitching = false
                 AgentUsageService.shared.pageDidAppear(preview: true)
             }
+        }
+    }
+
+    /// Relaunches Antigravity with proxy environment.
+    func relaunchWithProxy() {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            self.saveCurrentProfile()
+            let killProc = Process()
+            killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            killProc.arguments = ["-f", "/Applications/Antigravity.app/Contents/MacOS/Antigravity"]
+            try? killProc.run()
+            killProc.waitUntilExit()
+            Thread.sleep(forTimeInterval: 0.8)
+
+            let launchProc = Process()
+            launchProc.executableURL = URL(fileURLWithPath: "/bin/zsh")
+            launchProc.arguments = ["-l", "-c", Self.defaultProxyCommands]
+            try? launchProc.run()
         }
     }
 }

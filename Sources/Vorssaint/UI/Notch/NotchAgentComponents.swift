@@ -44,6 +44,7 @@ struct NotchAgentCardHeader<Accessory: View>: View {
     var tint: Color = .secondary
     /// A card about one agent wears its mark instead of the symbol.
     var provider: AgentProvider? = nil
+    var titleView: AnyView? = nil
     @ViewBuilder var accessory: Accessory
 
     var body: some View {
@@ -58,10 +59,14 @@ struct NotchAgentCardHeader<Accessory: View>: View {
                     .foregroundStyle(tint)
                     .frame(width: 13)
             }
-            Text(title)
-                .font(.system(size: 10.5, weight: .semibold))
-                .foregroundStyle(.white.opacity(0.9))
-                .lineLimit(1)
+            if let titleView {
+                titleView
+            } else {
+                Text(title)
+                    .font(.system(size: 10.5, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .lineLimit(1)
+            }
             Spacer(minLength: 4)
             accessory
         }
