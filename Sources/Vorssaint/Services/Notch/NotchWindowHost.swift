@@ -1240,10 +1240,11 @@ private final class NotchCanvas: NSView {
 
     func updateContrast() {
         let increasedContrast = NSWorkspace.shared.accessibilityDisplayShouldIncreaseContrast
+        let defaultOutlineAlpha: CGFloat = floatingGap != nil ? 0.16 : 0
         let color = (increasedContrast ? NSColor.white : outlineColor).withAlphaComponent(
-            outlineEnabled ? (increasedContrast ? 0.85 : 0.65) : (increasedContrast ? 0.45 : 0)).cgColor
+            outlineEnabled ? (increasedContrast ? 0.85 : 0.65) : (increasedContrast ? 0.45 : defaultOutlineAlpha)).cgColor
         let lineWidth: CGFloat = outlineEnabled ? NotchLayout.outlineWidth : 0.5
-        let opacity: Float = outlineEnabled || contentSize.height > 64 ? 1 : 0
+        let opacity: Float = outlineEnabled || floatingGap != nil || contentSize.height > 64 ? 1 : 0
         guard edge.strokeColor != color || edge.lineWidth != lineWidth || edge.opacity != opacity else { return }
         CATransaction.begin()
         CATransaction.setDisableActions(true)
@@ -1266,12 +1267,15 @@ private final class NotchCanvas: NSView {
     func setFloatingGap(_ gap: CGFloat?) {
         guard floatingGap != gap else { return }
         floatingGap = gap
+        backdropPresentation.isFloating = gap != nil
+        backdropPresentation.floatingGap = gap ?? 0
         stopMotion()
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         edgeMask.frame.origin.y = gap == nil ? Self.outlineTopGap : -10_000
         CATransaction.commit()
-        backdropPresentation.floatingGap = gap ?? 0
+        updateContrast()
+        updateCanvasBlack()
         needsLayout = true
         layoutSubtreeIfNeeded()
     }
@@ -1522,7 +1526,13 @@ private final class NotchCanvas: NSView {
     /// frame as it began to open or settled after closing. Under glass the
     /// fill gives way as the backdrop's resting black does.
     func updateCanvasBlack() {
-        let alpha = usesGlass ? CGFloat(backdropPresentation.restingBlack) : 1
+        let alpha: CGFloat
+        if floatingGap != nil {
+            // For floating capsules on external displays: clear layer background so backdrop's translucent frosted blur is visible
+            alpha = 0
+        } else {
+            alpha = usesGlass ? CGFloat(backdropPresentation.restingBlack) : 1
+        }
         let color = NSColor.black.withAlphaComponent(alpha).cgColor
         guard layer?.backgroundColor != color else { return }
         CATransaction.begin()

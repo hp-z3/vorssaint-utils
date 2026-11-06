@@ -484,6 +484,7 @@ struct NotchBandRow<Leading: View, Trailing: View>: View {
 final class NotchBackdropPresentation: ObservableObject {
     @Published var contour = Path()
     @Published var usesGlass = false
+    @Published var isFloating = false
     /// The camera strip's height in points, which the translucent background
     /// keeps black at every island height.
     @Published var stripHeight: CGFloat = 0
@@ -557,14 +558,66 @@ struct NotchSurfaceBackground: View {
 
     var body: some View {
         ZStack {
-            // The black the island rests in stays beneath the glass until
-            // the glass has opened, and the glass exists only while that
-            // black lets it show, so the window's resizes at either end of a
-            // transition happen in plain black.
-            Color.black.opacity(showsGlass || showsTranslucent ? presentation.restingBlack : 1)
+            if presentation.isFloating, !reduceTransparency {
+                floatingCapsuleBackground
+            } else {
+                // The black the island rests in stays beneath the glass until
+                // the glass has opened, and the glass exists only while that
+                // black lets it show, so the window's resizes at either end of a
+                // transition happen in plain black.
+                Color.black.opacity(showsGlass || showsTranslucent ? presentation.restingBlack : 1)
+#if compiler(>=6.2)
+                if #available(macOS 26, *), showsGlass, presentation.restingBlack < 1 {
+                    let shape = NotchBackdropShape(contour: presentation.contour)
+                    Color.clear
+                        .glassEffect(.clear, in: shape)
+                        .environment(\.appearsActive, true)
+                        .materialActiveAppearance(.active)
+                        .overlay {
+                            LinearGradient(stops: Self.shade(openness: presentation.openness, contrast: contrast),
+                                           startPoint: .top, endPoint: .bottom)
+                                .frame(height: presentation.contourBottom)
+                                .frame(maxHeight: .infinity, alignment: .top)
+                                .mask(shape)
+                        }
+                }
+#endif
+                if showsTranslucent, presentation.restingBlack < 1 {
+                    translucentOrBlack
+                }
+            }
+        }
+        .environment(\.colorScheme, .dark)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// On external displays (floating capsule), render frosted glass blur with a soft dark tint
+    /// so the capsule blends naturally into the menu bar and wallpaper rather than looking like a solid black hole.
+    @ViewBuilder private var floatingCapsuleBackground: some View {
+        let shape = NotchBackdropShape(contour: presentation.contour)
+        let box = presentation.contour.boundingRect.integral
+        let height = presentation.contourBottom
+
+        ZStack(alignment: .topLeading) {
+            // 1. Native macOS blur behind the window inside the capsule contour
+            if !box.isNull, box.width > 0, box.height > 0 {
+                NotchTranslucentMaterial(contour: presentation.contour.offsetBy(dx: -box.minX, dy: -box.minY).cgPath)
+                    .frame(width: box.width, height: box.height)
+                    .padding(EdgeInsets(top: box.minY, leading: box.minX, bottom: 0, trailing: 0))
+            }
+
+            // 2. Translucent smoked dark tint (soft dark translucency instead of solid pitch black)
+            let baseAlpha: Double = contrast == .increased ? 0.72 : 0.48
+            let tintAlpha = (showsGlass || showsTranslucent)
+                ? baseAlpha * presentation.restingBlack
+                : (presentation.openness > 0 ? (0.48 + 0.38 * presentation.openness) : baseAlpha)
+
+            Color.black.opacity(tintAlpha)
+                .mask(shape)
+
 #if compiler(>=6.2)
             if #available(macOS 26, *), showsGlass, presentation.restingBlack < 1 {
-                let shape = NotchBackdropShape(contour: presentation.contour)
                 Color.clear
                     .glassEffect(.clear, in: shape)
                     .environment(\.appearsActive, true)
@@ -572,7 +625,7 @@ struct NotchSurfaceBackground: View {
                     .overlay {
                         LinearGradient(stops: Self.shade(openness: presentation.openness, contrast: contrast),
                                        startPoint: .top, endPoint: .bottom)
-                            .frame(height: presentation.contourBottom)
+                            .frame(height: height)
                             .frame(maxHeight: .infinity, alignment: .top)
                             .mask(shape)
                     }
@@ -582,9 +635,6 @@ struct NotchSurfaceBackground: View {
                 translucentOrBlack
             }
         }
-        .environment(\.colorScheme, .dark)
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
     }
 
     /// The dimming over the glass, from the top of the island to its lip. Near
