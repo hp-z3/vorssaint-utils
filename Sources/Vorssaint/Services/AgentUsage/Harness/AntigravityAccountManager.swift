@@ -70,7 +70,7 @@ final class AntigravityAccountManager: ObservableObject {
             try? "1".write(to: Self.activeFile, atomically: true, encoding: .utf8)
         }
 
-        let currEmail = readCurrentEmail() ?? ""
+        let currEmail = readCurrentAppEmail() ?? ""
         profile1Email = readProfileEmail(index: 1) ?? (activeProfileIndex == 1 ? currEmail : "")
         profile2Email = readProfileEmail(index: 2) ?? (activeProfileIndex == 2 ? currEmail : "")
     }
@@ -103,13 +103,7 @@ final class AntigravityAccountManager: ObservableObject {
         return nil
     }
 
-    private func readCurrentEmail() -> String? {
-        // 1. Try current Keychain token
-        if let token = Self.readCurrentKeychainToken(), let email = Self.parseEmail(fromKeychainToken: token) {
-            return email
-        }
-
-        // 2. Fallback to current Application Support app_storage.json
+    private func readCurrentAppEmail() -> String? {
         let file = Self.appSupportFolder.appendingPathComponent("app_storage.json")
         guard let data = try? Data(contentsOf: file),
               let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
