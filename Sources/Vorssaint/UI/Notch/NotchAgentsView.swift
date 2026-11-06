@@ -187,6 +187,7 @@ private struct NotchAgentChip: View {
             .font(.system(size: 9, weight: .semibold))
             .foregroundStyle(tint.opacity(0.9))
             .lineLimit(1)
+            .fixedSize(horizontal: true, vertical: false)
             .padding(.horizontal, 5)
             .padding(.vertical, 1.5)
             .background(tint.opacity(0.14), in: Capsule(style: .continuous))
@@ -237,10 +238,11 @@ private struct NotchAgentAntigravityTitle: View {
                     .lineLimit(1)
                 Image(systemName: "chevron.down")
                     .font(.system(size: 7, weight: .bold))
-                    .foregroundStyle(.white.opacity(0.45))
+                    .foregroundStyle(.white.opacity(0.5))
             }
         }
         .menuStyle(.borderlessButton)
+        .menuIndicator(.hidden)
         .fixedSize()
         .help("点击切换 Antigravity 账号")
     }
@@ -350,7 +352,10 @@ private struct NotchAgentLimitsCard: View {
                                          provider: provider,
                                          titleView: AnyView(NotchAgentAntigravityTitle(displayName: provider.displayName))) {
                         HStack(spacing: 4) {
-                            if let plan = snapshot.plans[provider] { NotchAgentChip(text: plan.name, tint: provider.tint) }
+                            if let plan = snapshot.plans[provider] {
+                                let badgeText = plan.name.replacingOccurrences(of: "Google AI ", with: "")
+                                NotchAgentChip(text: badgeText, tint: provider.tint)
+                            }
                             if !snapshot.working(provider).isEmpty { NotchAgentPulse(tint: provider.tint, size: 5) }
                         }
                     }

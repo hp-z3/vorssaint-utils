@@ -3,6 +3,7 @@
 
 import Foundation
 import Combine
+import AppKit
 
 /// Manages multiple Antigravity account profiles and switching between them.
 final class AntigravityAccountManager: ObservableObject {
@@ -40,7 +41,8 @@ final class AntigravityAccountManager: ObservableObject {
         "app_storage.json",
         "Local State",
         "Preferences",
-        "Network Persistent State"
+        "Network Persistent State",
+        "Partitions"
     ]
 
     static let defaultProxyCommands = """
@@ -68,7 +70,7 @@ final class AntigravityAccountManager: ObservableObject {
             try? "1".write(to: Self.activeFile, atomically: true, encoding: .utf8)
         }
 
-        let currEmail = readCurrentAppEmail() ?? ""
+        let currEmail = readCurrentEmail() ?? ""
         profile1Email = readProfileEmail(index: 1) ?? (activeProfileIndex == 1 ? currEmail : "")
         profile2Email = readProfileEmail(index: 2) ?? (activeProfileIndex == 2 ? currEmail : "")
     }
@@ -78,31 +80,157 @@ final class AntigravityAccountManager: ObservableObject {
     }
 
     private func readProfileEmail(index: Int) -> String? {
-        let file = profileFolder(for: index).appendingPathComponent("app_storage.json")
+        let folder = profileFolder(for: index)
+        // 1. Try Keychain token saved for this profile
+        let kcFile = folder.appendingPathComponent("keychain_token.txt")
+        if let tokenStr = try? String(contentsOf: kcFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
+           let email = Self.parseEmail(fromKeychainToken: tokenStr) {
+            return email
+        }
+
+        // 2. Fallback to app_storage.json
+        let file = folder.appendingPathComponent("app_storage.json")
         guard let data = try? Data(contentsOf: file),
-              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let user = json["jetski.onboarding.lastLoginUsername"] as? String, !user.isEmpty else {
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
             return nil
         }
-        return user
+        if let user = json["agy.onboarding.lastLoginUsername"] as? String, !user.isEmpty {
+            return user
+        }
+        if let user = json["jetski.onboarding.lastLoginUsername"] as? String, !user.isEmpty {
+            return user
+        }
+        return nil
     }
 
-    private func readCurrentAppEmail() -> String? {
+    private func readCurrentEmail() -> String? {
+        // 1. Try current Keychain token
+        if let token = Self.readCurrentKeychainToken(), let email = Self.parseEmail(fromKeychainToken: token) {
+            return email
+        }
+
+        // 2. Fallback to current Application Support app_storage.json
         let file = Self.appSupportFolder.appendingPathComponent("app_storage.json")
         guard let data = try? Data(contentsOf: file),
-              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
-              let user = json["jetski.onboarding.lastLoginUsername"] as? String, !user.isEmpty else {
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
             return nil
         }
-        return user
+        if let user = json["agy.onboarding.lastLoginUsername"] as? String, !user.isEmpty {
+            return user
+        }
+        if let user = json["jetski.onboarding.lastLoginUsername"] as? String, !user.isEmpty {
+            return user
+        }
+        return nil
     }
 
-    /// Saves current active state from Application Support to current profile folder.
+    // MARK: - Keychain Helpers
+
+    private static func readCurrentKeychainToken() -> String? {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = ["find-generic-password", "-s", "gemini", "-a", "antigravity", "-w"]
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        try? proc.run()
+        proc.waitUntilExit()
+        guard proc.terminationStatus == 0 else { return nil }
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let str = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines)
+        return (str?.isEmpty == false) ? str : nil
+    }
+
+    private static func setKeychainToken(_ token: String) {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = ["add-generic-password", "-U", "-s", "gemini", "-a", "antigravity", "-w", token]
+        try? proc.run()
+        proc.waitUntilExit()
+    }
+
+    private static func deleteKeychainToken() {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/security")
+        proc.arguments = ["delete-generic-password", "-s", "gemini", "-a", "antigravity"]
+        try? proc.run()
+        proc.waitUntilExit()
+    }
+
+    static func parseEmail(fromKeychainToken tokenStr: String) -> String? {
+        var base64Part = tokenStr
+        if base64Part.hasPrefix("go-keyring-base64:") {
+            base64Part = String(base64Part.dropFirst("go-keyring-base64:".count))
+        }
+        guard let data = Data(base64Encoded: base64Part),
+              let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else {
+            return nil
+        }
+        if let email = json["id_token_email"] as? String, !email.isEmpty {
+            return email
+        }
+        return nil
+    }
+
+    // MARK: - Process Management
+
+    private static func isProcessRunning() -> Bool {
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/pgrep")
+        proc.arguments = ["-f", "/Applications/Antigravity.app/Contents/MacOS/Antigravity"]
+        let pipe = Pipe()
+        proc.standardOutput = pipe
+        try? proc.run()
+        proc.waitUntilExit()
+        return proc.terminationStatus == 0
+    }
+
+    private static func stopAntigravity() {
+        // 1. Graceful quit via AppleScript
+        let script = NSAppleScript(source: "tell application \"Antigravity\" to quit")
+        script?.executeAndReturnError(nil)
+
+        // 2. Wait up to 2.5s for process to exit
+        let deadline = Date().addingTimeInterval(2.5)
+        while Date() < deadline {
+            if !isProcessRunning() { break }
+            Thread.sleep(forTimeInterval: 0.2)
+        }
+
+        // 3. Force kill if still running
+        if isProcessRunning() {
+            let killProc = Process()
+            killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+            killProc.arguments = ["-9", "-f", "/Applications/Antigravity.app"]
+            try? killProc.run()
+            killProc.waitUntilExit()
+            Thread.sleep(forTimeInterval: 0.3)
+        }
+
+        // 4. Kill lingering language_server if present
+        let killLs = Process()
+        killLs.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
+        killLs.arguments = ["-f", "Contents/Resources/bin/language_server"]
+        try? killLs.run()
+        killLs.waitUntilExit()
+
+        // 5. Remove Singleton lock files to prevent Chromium re-attaching
+        let fm = FileManager.default
+        let locks = ["SingletonLock", "SingletonCookie", "SingletonSocket"]
+        for lock in locks {
+            let lockPath = appSupportFolder.appendingPathComponent(lock)
+            try? fm.removeItem(at: lockPath)
+        }
+    }
+
+    // MARK: - Profile Actions
+
+    /// Saves current active state from Application Support and Keychain to current profile folder.
     func saveCurrentProfile() {
         let fm = FileManager.default
         let folder = profileFolder(for: activeProfileIndex)
         try? fm.createDirectory(at: folder, withIntermediateDirectories: true)
 
+        // Save Application Support files
         for item in Self.authFiles {
             let src = Self.appSupportFolder.appendingPathComponent(item)
             let dst = folder.appendingPathComponent(item)
@@ -111,6 +239,13 @@ final class AntigravityAccountManager: ObservableObject {
                 try? fm.copyItem(at: src, to: dst)
             }
         }
+
+        // Save Keychain token
+        if let token = Self.readCurrentKeychainToken() {
+            let dst = folder.appendingPathComponent("keychain_token.txt")
+            try? token.write(to: dst, atomically: true, encoding: .utf8)
+        }
+
         loadState()
     }
 
@@ -129,23 +264,24 @@ final class AntigravityAccountManager: ObservableObject {
             guard let self else { return }
             let fm = FileManager.default
 
-            // 1. Save current profile
+            // 1. Terminate Antigravity cleanly so DB and localStorage are fully flushed
+            Self.stopAntigravity()
+
+            // 2. Save active profile state (clean flush guaranteed)
             self.saveCurrentProfile()
 
-            // 2. Quit Antigravity
-            let killProc = Process()
-            killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-            killProc.arguments = ["-f", "/Applications/Antigravity.app/Contents/MacOS/Antigravity"]
-            try? killProc.run()
-            killProc.waitUntilExit()
-            Thread.sleep(forTimeInterval: 0.8)
-
-            // 3. Switch index
+            // 3. Switch index and restore target profile
             let newIndex = targetIndex
             let targetFolder = self.profileFolder(for: newIndex)
 
             if fm.fileExists(atPath: targetFolder.path) {
-                // Restore target profile files
+                // Restore Keychain token
+                let kcFile = targetFolder.appendingPathComponent("keychain_token.txt")
+                if let token = try? String(contentsOf: kcFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines), !token.isEmpty {
+                    Self.setKeychainToken(token)
+                }
+
+                // Restore Application Support files
                 for item in Self.authFiles {
                     let src = targetFolder.appendingPathComponent(item)
                     let dst = Self.appSupportFolder.appendingPathComponent(item)
@@ -155,7 +291,8 @@ final class AntigravityAccountManager: ObservableObject {
                     }
                 }
             } else {
-                // New profile: remove current auth files so it prompts sign-in
+                // New profile: remove current auth files and keychain token so it prompts sign-in
+                Self.deleteKeychainToken()
                 for item in Self.authFiles {
                     let dst = Self.appSupportFolder.appendingPathComponent(item)
                     try? fm.removeItem(at: dst)
@@ -182,13 +319,8 @@ final class AntigravityAccountManager: ObservableObject {
     func relaunchWithProxy() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self else { return }
+            Self.stopAntigravity()
             self.saveCurrentProfile()
-            let killProc = Process()
-            killProc.executableURL = URL(fileURLWithPath: "/usr/bin/pkill")
-            killProc.arguments = ["-f", "/Applications/Antigravity.app/Contents/MacOS/Antigravity"]
-            try? killProc.run()
-            killProc.waitUntilExit()
-            Thread.sleep(forTimeInterval: 0.8)
 
             let launchProc = Process()
             launchProc.executableURL = URL(fileURLWithPath: "/bin/zsh")
