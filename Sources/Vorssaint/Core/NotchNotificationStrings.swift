@@ -154,7 +154,7 @@ extension FeatureStrings {
             hideSystemBannerHint: "Dynamic Island에 표시되는 동안 원래 알림을 숨깁니다.")
         case .zhHans: return NotchNotificationStrings(
             title: "通知",
-            description: "在Dynamic Island中查看新的系统通知。",
+            description: "在灵动岛中查看新的系统通知。",
             privacy: "仅显示新出现的通知。消息只保存在内存中，锁定此 Mac 或关闭功能时会清除。",
             empty: "新通知将显示在这里",
             waiting: "正在等待系统通知服务",
@@ -163,10 +163,10 @@ extension FeatureStrings {
             clearAll: "全部清除",
             unavailable: "此通知已无法执行此操作。",
             hideSystemBanner: "隐藏系统通知",
-            hideSystemBannerHint: "在Dynamic Island中显示时隐藏原通知。")
+            hideSystemBannerHint: "在灵动岛中显示时隐藏原通知。")
         case .zhTW: return NotchNotificationStrings(
             title: "通知",
-            description: "在Dynamic Island中查看新的系統通知。",
+            description: "在靈動島中查看新的系統通知。",
             privacy: "只顯示新出現的通知。訊息僅保留在記憶體中，鎖定這部 Mac 或關閉功能時會清除。",
             empty: "新通知會顯示在這裡",
             waiting: "正在等待系統通知服務",
@@ -175,10 +175,10 @@ extension FeatureStrings {
             clearAll: "全部清除",
             unavailable: "此通知已無法執行此操作。",
             hideSystemBanner: "隱藏系統通知",
-            hideSystemBannerHint: "在Dynamic Island中顯示時隱藏原通知。")
+            hideSystemBannerHint: "在靈動島中顯示時隱藏原通知。")
         case .zhHK: return NotchNotificationStrings(
             title: "通知",
-            description: "在Dynamic Island中查看新的系統通知。",
+            description: "在靈動島中查看新的系統通知。",
             privacy: "只顯示新出現的通知。訊息只保留在記憶體中，鎖定此 Mac 或關閉功能時會清除。",
             empty: "新通知會顯示在這裏",
             waiting: "正在等候系統通知服務",
@@ -187,7 +187,7 @@ extension FeatureStrings {
             clearAll: "全部清除",
             unavailable: "此通知已無法執行此操作。",
             hideSystemBanner: "隱藏系統通知",
-            hideSystemBannerHint: "在Dynamic Island顯示時隱藏原通知。")
+            hideSystemBannerHint: "在靈動島顯示時隱藏原通知。")
         case .uk: return NotchNotificationStrings(
             title: "Сповіщення",
             description: "Нові системні сповіщення у Dynamic Island.",

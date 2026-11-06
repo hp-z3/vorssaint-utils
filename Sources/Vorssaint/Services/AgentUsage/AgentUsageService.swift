@@ -99,6 +99,8 @@ final class AgentUsageService: ObservableObject {
     /// The last snapshot handed over, to tell when time alone changes it.
     private var published = AgentUsageSnapshot()
     private var claudePlan: AgentPlan?
+    private var antigravityPlan: AgentPlan?
+    private var lastAntigravityQuotaCheck = Date.distantPast
     /// The organization Claude Code signs in to, when its profile says.
     private var claudeOrganization: String?
     private var claudeIdentity: ClaudeAccountProfile.Identity?
@@ -226,6 +228,8 @@ final class AgentUsageService: ObservableObject {
             warned.removeAll()
             budgetDay = nil
             claudePlan = nil
+            antigravityPlan = nil
+            lastAntigravityQuotaCheck = .distantPast
             claudeOrganization = nil
             claudeIdentity = nil
             claudeProfileModified = nil
@@ -259,6 +263,7 @@ final class AgentUsageService: ObservableObject {
             guard readerSession >= 0 else { return }
             readClaudePlan()
             readClaudeApp(now: Date())
+            readAntigravityQuota(now: Date(), force: true)
             checkLimits()
             publish()
         }
@@ -320,6 +325,7 @@ final class AgentUsageService: ObservableObject {
             // The account Claude Code uses picks the Claude app's readings.
             readClaudePlan()
             readClaudeApp(now: now)
+            readAntigravityQuota(now: now, force: true)
             store.reportsTransitions = true
             previousLimits = store.limits
             // A budget already passed before launch is history, not news.
@@ -603,6 +609,7 @@ final class AgentUsageService: ObservableObject {
             }
             readClaudePlan()
             readClaudeApp(now: now)
+            readAntigravityQuota(now: now)
             checkLimits()
             reportRenewals(now: now)
             if now.timeIntervalSince(lastSave) >= Self.saveInterval { saveProgress() }
@@ -620,6 +627,7 @@ final class AgentUsageService: ObservableObject {
         let limits: [AgentProvider: AgentLimits]
         let codexPlan: String?
         let claudePlan: AgentPlan?
+        let antigravityPlan: AgentPlan?
         let claudeOrganization: String?
         let claudeIdentity: ClaudeAccountProfile.Identity?
         let claudeApp: [AgentClaudeAppUsage.Sample]
@@ -628,7 +636,7 @@ final class AgentUsageService: ObservableObject {
     /// Runs on `queue`.
     private var inputs: Inputs {
         Inputs(records: store.records.count, turns: store.turns, limits: store.limits, codexPlan: store.codexPlan,
-               claudePlan: claudePlan, claudeOrganization: claudeOrganization, claudeIdentity: claudeIdentity,
+               claudePlan: claudePlan, antigravityPlan: antigravityPlan, claudeOrganization: claudeOrganization, claudeIdentity: claudeIdentity,
                claudeApp: claudeAppSamples)
     }
 
@@ -639,6 +647,7 @@ final class AgentUsageService: ObservableObject {
         var plans: [AgentProvider: AgentPlan] = [:]
         if let claudePlan { plans[.claude] = claudePlan }
         if let codex = AgentPlans.codex(planType: store.codexPlan) { plans[.codex] = codex }
+        if let antigravityPlan { plans[.antigravity] = antigravityPlan }
         let next = store.snapshot(plans: plans, providers: enabled, now: Date())
         published = next
         checkBudget(next)
@@ -917,6 +926,44 @@ final class AgentUsageService: ObservableObject {
                           AgentPricing.install(AgentPriceList.newer(self.shippedPrices, list) ?? list) else { return }
                     self.store.reprice()
                     self.publish()
+                }
+            }
+        }
+    }
+
+    /// Reads quota summary from Antigravity local Language Server.
+    /// Runs on `queue`.
+    private func readAntigravityQuota(now: Date, force: Bool = false) {
+        guard enabled.contains(.antigravity) else {
+            store.clearLimits(.antigravity)
+            antigravityPlan = nil
+            return
+        }
+        guard force || now.timeIntervalSince(lastAntigravityQuotaCheck) >= 60 else { return }
+        lastAntigravityQuotaCheck = now
+        let session = readerSession
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            guard let reading = AntigravityQuotaReader.query() else { return }
+            self?.queue.async {
+                guard let self, self.readerSession == session, self.enabled.contains(.antigravity) else { return }
+                var windows: [AgentLimitWindow] = []
+                if let s = reading.sessionLimit {
+                    windows.append(AgentLimitWindow(
+                        id: s.id, kind: .session, minutes: 300, scope: nil,
+                        usedPercent: max(0, min(100, (1.0 - s.remainingFraction) * 100.0)), resetsAt: s.resetTime
+                    ))
+                }
+                if let w = reading.weeklyLimit {
+                    windows.append(AgentLimitWindow(
+                        id: w.id, kind: .weekly, minutes: 10080, scope: nil,
+                        usedPercent: max(0, min(100, (1.0 - w.remainingFraction) * 100.0)), resetsAt: w.resetTime
+                    ))
+                }
+                if !windows.isEmpty {
+                    self.store.setLimits(AgentLimits(provider: .antigravity, windows: windows, observedAt: Date(), source: .account))
+                    self.antigravityPlan = AgentPlan(name: reading.plan, monthlyPrice: nil)
+                    self.checkLimits()
+                    self.schedulePublish()
                 }
             }
         }

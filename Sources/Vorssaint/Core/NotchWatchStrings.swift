@@ -421,7 +421,7 @@ extension FeatureStrings {
             sound: "Відтворити звук")
         case .zhHans: return NotchWatchStrings(
             title: "观察",
-            description: "把任意窗口的任意部分变成Dynamic Island中的实时活动，在它变化、完成或出现你等待的内容时提醒你。",
+            description: "把任意窗口的任意部分变成灵动岛中的实时活动，在它变化、完成或出现你等待的内容时提醒你。",
             setupHint: "选择窗口的任意部分，比如进度条、构建状态或比分。岛会替你读取，并在它变化时提醒你。",
             choose: "选择区域",
             chooseAgain: "选择其他区域",
@@ -451,7 +451,7 @@ extension FeatureStrings {
             sound: "播放声音")
         case .zhTW: return NotchWatchStrings(
             title: "觀察",
-            description: "把任何視窗的任何部分變成Dynamic Island中的即時動態，在它變化、完成或出現你等待的內容時提醒你。",
+            description: "把任何視窗的任何部分變成靈動島中的即時動態，在它變化、完成或出現你等待的內容時提醒你。",
             setupHint: "選擇視窗的任何部分，例如進度列、建置狀態或比數。島會替你讀取，並在它變化時提醒你。",
             choose: "選擇區域",
             chooseAgain: "選擇其他區域",
@@ -481,7 +481,7 @@ extension FeatureStrings {
             sound: "播放聲音")
         case .zhHK: return NotchWatchStrings(
             title: "觀察",
-            description: "把任何視窗的任何部分變成Dynamic Island中的即時動態，在它變化、完成或出現你等待的內容時提醒你。",
+            description: "把任何視窗的任何部分變成靈動島中的即時動態，在它變化、完成或出現你等待的內容時提醒你。",
             setupHint: "選擇視窗的任何部分，例如進度列、建置狀態或比數。島會替你讀取，並在它變化時提醒你。",
             choose: "選擇區域",
             chooseAgain: "選擇其他區域",

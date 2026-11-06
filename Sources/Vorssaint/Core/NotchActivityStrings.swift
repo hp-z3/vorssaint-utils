@@ -380,7 +380,7 @@ extension FeatureStrings {
             keepAwakeActivityHint: "진행 중인 세션이 남은 시간과 함께 카메라 옆에 표시되며, 끝이 없으면 ∞로 표시됩니다.")
         case .zhHans: return NotchActivityStrings(
             timer: "计时器",
-            timerDescription: "在Dynamic Island中使用计时器、秒表和专注时段。",
+            timerDescription: "在灵动岛中使用计时器、秒表和专注时段。",
             pomodoro: "番茄钟",
             stopwatch: "秒表",
             focus: "专注",
@@ -410,7 +410,7 @@ extension FeatureStrings {
             keepAwakeActivityHint: "进行中的会话会显示在摄像头旁，并附上剩余时间；没有结束时间时显示 ∞。")
         case .zhTW: return NotchActivityStrings(
             timer: "計時器",
-            timerDescription: "在Dynamic Island中使用計時器、碼錶與專注時段。",
+            timerDescription: "在靈動島中使用計時器、碼錶與專注時段。",
             pomodoro: "番茄鐘",
             stopwatch: "碼錶",
             focus: "專注",
@@ -440,7 +440,7 @@ extension FeatureStrings {
             keepAwakeActivityHint: "進行中的工作階段會顯示在相機旁並附上剩餘時間；沒有結束時間時顯示 ∞。")
         case .zhHK: return NotchActivityStrings(
             timer: "計時器",
-            timerDescription: "在Dynamic Island中使用計時器、秒錶和專注時段。",
+            timerDescription: "在靈動島中使用計時器、秒錶和專注時段。",
             pomodoro: "番茄鐘",
             stopwatch: "秒錶",
             focus: "專注",

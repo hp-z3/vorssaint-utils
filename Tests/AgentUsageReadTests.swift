@@ -83,6 +83,7 @@ enum AgentUsageReadTests {
         func closeEndedTurns(_ roots: [AgentLogRoot], atLaunch: Bool) {}
         func readClaudePlan() {}
         func readClaudeApp(now: Date) {}
+        func readAntigravityQuota(now: Date, force: Bool = false) {}
         func watch(_ roots: [AgentLogRoot]) { watchedRoots = roots }
         func startPolling() {}
         func syncPolling() {}
@@ -146,6 +147,7 @@ enum AgentUsageReadTests {
                 case .codex: entries += AgentLogParser.parseCodex(line, state: &cursor.state, now: now)
                 case .opencode: entries += AgentLogParser.parseOpenCode(line, state: &cursor.state, now: now)
                 case .copilot: entries += AgentLogParser.parseCopilot(line, state: &cursor.state, now: now)
+                case .antigravity: entries += AgentLogParser.parseAntigravity(line, state: &cursor.state, now: now)
                 }
             }
             if provider == .copilot {

@@ -57,16 +57,16 @@ extension FeatureStrings {
             description: "스크롤로 Dynamic Island를 열고 닫고, 옆으로 쓸어 곡을 바꾸세요.",
             hint: "아래로 스크롤하면 열립니다. 상단 줄에서 위로 스크롤하면 닫힙니다. 음악 위에서 좌우로 쓸면 곡이 바뀝니다. 목록은 기존처럼 스크롤됩니다.")
         case .zhHans: return NotchGestureStrings(
-            title: "Dynamic Island手势",
-            description: "滚动以打开或关闭Dynamic Island，左右轻扫以切换歌曲。",
+            title: "灵动岛手势",
+            description: "滚动以打开或关闭灵动岛，左右轻扫以切换歌曲。",
             hint: "向下滚动以打开，在顶部栏向上滚动以关闭。在音乐上左右轻扫以切换歌曲。列表保持原有滚动方式。")
         case .zhTW: return NotchGestureStrings(
-            title: "Dynamic Island手勢",
-            description: "捲動以打開或關閉Dynamic Island，左右滑動以切換歌曲。",
+            title: "靈動島手勢",
+            description: "捲動以打開或關閉靈動島，左右滑動以切換歌曲。",
             hint: "向下捲動以打開，在頂部列向上捲動以關閉。在音樂上左右滑動以切換歌曲。列表保留原有的捲動方式。")
         case .zhHK: return NotchGestureStrings(
-            title: "Dynamic Island手勢",
-            description: "捲動以開啟或關閉Dynamic Island，左右滑動以切換歌曲。",
+            title: "靈動島手勢",
+            description: "捲動以開啟或關閉靈動島，左右滑動以切換歌曲。",
             hint: "向下捲動以開啟，在頂部列向上捲動以關閉。在音樂上左右滑動以切換歌曲。列表保留原有的捲動方式。")
         case .uk: return NotchGestureStrings(
             title: "Жести Dynamic Island",

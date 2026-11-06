@@ -18,6 +18,7 @@ struct NotchAgentsView: View {
     @AppStorage(DefaultsKey.notchAgentsCodex) private var codex = true
     @AppStorage(DefaultsKey.notchAgentsOpenCode) private var opencode = true
     @AppStorage(DefaultsKey.notchAgentsCopilot) private var copilot = true
+    @AppStorage(DefaultsKey.notchAgentsAntigravity) private var antigravity = true
 
     private var text: NotchAgentStrings { FeatureStrings.notchAgents(l10n.language) }
     private var chosenPeriod: AgentPeriod { AgentPeriod(rawValue: period) ?? .today }
@@ -32,9 +33,17 @@ struct NotchAgentsView: View {
     /// Only agents that left something on this Mac, or whose accounts were
     /// added, get cards.
     private var providers: [AgentProvider] {
-        [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil].compactMap { $0 }
+        let list = [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil, antigravity ? .antigravity : nil].compactMap { $0 }
             .filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty)
                 || ($0 == .claude && !usage.claudeProfile.isDefault) }
+        return list.sorted { p1, p2 in
+            let w1 = !usage.snapshot.working(p1).isEmpty
+            let w2 = !usage.snapshot.working(p2).isEmpty
+            if w1 != w2 { return w1 }
+            let t1 = usage.snapshot.lastActivity[p1] ?? .distantPast
+            let t2 = usage.snapshot.lastActivity[p2] ?? .distantPast
+            return t1 > t2
+        }
     }
 
     private var rows: [[NotchAgentTile]] {
@@ -430,8 +439,8 @@ private struct NotchAgentLimitsCard: View {
         } else if provider == .claude {
             Text(text.noSession).font(.system(size: 10.5)).foregroundStyle(.secondary)
             setUpLimits
-        } else if provider == .opencode {
-            let todayUsage = snapshot.usage(.today).byProvider[.opencode]
+        } else if provider == .opencode || provider == .antigravity {
+            let todayUsage = snapshot.usage(.today).byProvider[provider]
             if let todayUsage, todayUsage.tokens.total > 0 || todayUsage.requests > 0 || todayUsage.cost > 0 {
                 let costText: String = {
                     if todayUsage.unpriced > 0 {
@@ -459,6 +468,26 @@ private struct NotchAgentLimitsCard: View {
                                 .font(.system(size: 9.5))
                                 .foregroundStyle(.tertiary)
                         }
+                        Spacer()
+                        lastUsed
+                    }
+                }
+            } else if !snapshot.working(provider).isEmpty {
+                let live = snapshot.live.first(where: { $0.provider == provider })
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 5) {
+                        Text(text.period(.today))
+                            .font(.system(size: 10, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.85))
+                        Spacer(minLength: 2)
+                        Text(AgentFormat.cost(live?.cost ?? 0))
+                            .font(.system(size: 12, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                    }
+                    HStack(spacing: 4) {
+                        Text(AgentFormat.tokens(live?.tokens.total ?? 0))
+                            .font(.system(size: 9.5))
+                            .foregroundStyle(.secondary)
                         Spacer()
                         lastUsed
                     }

@@ -139,7 +139,7 @@ enum ReleaseChangeAliases {
         case .wallpaper: return [.exact("Wallpaper"), "wallpaper gallery", "wallpapers"]
         case .killProcess: return ["kill process", "force kill", "process tree"]
         case .portManager: return ["port manager"]
-        case .notch: return ["dynamic island", "island", "islands", "notch", "volume keys", "volume key",
+        case .notch: return ["灵动岛", "靈動島", "dynamic island", "island", "islands", "notch", "volume keys", "volume key",
             "mute key", "volume feedback", "volume indicator", "volume notice", "new track indicator",
             "displays without a notch", "displays without a camera cutout"]
         case .notchCalendar: return [.island("calendar"), "event countdown", "event countdowns", "week numbers",

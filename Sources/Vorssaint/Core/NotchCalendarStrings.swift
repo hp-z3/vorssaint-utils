@@ -413,7 +413,7 @@ extension FeatureStrings {
             calendars: "표시할 캘린더")
         case .zhHans: return NotchCalendarStrings(
             title: "日历",
-            description: "在Dynamic Island中浏览月历和即将开始的日程。",
+            description: "在灵动岛中浏览月历和即将开始的日程。",
             permission: "读取日历以显示即将开始的日程。日程信息仅保留在此 Mac 上。",
             allow: "允许访问日历",
             denied: "请在系统设置中允许访问日历，以查看日程。",
@@ -446,7 +446,7 @@ extension FeatureStrings {
             calendars: "显示的日历")
         case .zhTW: return NotchCalendarStrings(
             title: "行事曆",
-            description: "在Dynamic Island中瀏覽月曆與即將到來的行程。",
+            description: "在靈動島中瀏覽月曆與即將到來的行程。",
             permission: "讀取行事曆以顯示即將到來的行程。行程資訊僅保留在這部 Mac 上。",
             allow: "允許取用行事曆",
             denied: "請在系統設定中允許取用行事曆，以查看行程。",
@@ -479,7 +479,7 @@ extension FeatureStrings {
             calendars: "顯示的行事曆")
         case .zhHK: return NotchCalendarStrings(
             title: "日曆",
-            description: "在Dynamic Island中瀏覽月曆及即將到來的行程。",
+            description: "在靈動島中瀏覽月曆及即將到來的行程。",
             permission: "讀取日曆以顯示即將到來的行程。行程資料只保留在此 Mac 上。",
             allow: "允許取用日曆",
             denied: "請在系統設定中允許取用日曆，以查看行程。",

@@ -221,7 +221,7 @@ extension BackupFeatureStrings {
         exportFailed: "无法存储备份。",
         importConfirmTitle: "导入这些设置？",
         importConfirmBody: "当前设置将被文件中的设置替换，App 会重启。这台 Mac 上的其他内容不受影响。",
-        importMissingIslandBody: "此备份不包含 Dynamic Island 设置。这台 Mac 上的相关设置将保留。要从另一台 Mac 复制这些设置，请使用 Vorssaint 3.4 或更新版本重新导出。其他设置将被导入，然后 App 会重启。",
+        importMissingIslandBody: "此备份不包含灵动岛设置。这台 Mac 上的相关设置将保留。要从另一台 Mac 复制这些设置，请使用 Vorssaint 3.4 或更新版本重新导出。其他设置将被导入，然后 App 会重启。",
         importAction: "导入并重启",
         invalidFile: "该文件不是有效的 Vorssaint 备份。"
     )
@@ -235,7 +235,7 @@ extension BackupFeatureStrings {
         exportFailed: "無法儲存備份。",
         importConfirmTitle: "匯入這些設定?",
         importConfirmBody: "目前設定將被檔案中的設定取代,App 會重新啟動。這台 Mac 上的其他內容不受影響。",
-        importMissingIslandBody: "此備份不包含 Dynamic Island 設定。這台 Mac 上的相關設定會保留。若要從另一台 Mac 複製這些設定,請使用 Vorssaint 3.4 或較新版本重新匯出。其他設定會匯入,然後 App 會重新啟動。",
+        importMissingIslandBody: "此備份不包含靈動島設定。這台 Mac 上的相關設定會保留。若要從另一台 Mac 複製這些設定,請使用 Vorssaint 3.4 或較新版本重新匯出。其他設定會匯入,然後 App 會重新啟動。",
         importAction: "匯入並重新啟動",
         invalidFile: "此檔案不是有效的 Vorssaint 備份。"
     )
@@ -249,7 +249,7 @@ extension BackupFeatureStrings {
         exportFailed: "儲存唔到備份。",
         importConfirmTitle: "匯入這些設定?",
         importConfirmBody: "目前設定將被檔案中的設定取代,App 會重新啟動。這台 Mac 上的其他內容不受影響。",
-        importMissingIslandBody: "呢份備份冇 Dynamic Island 設定。呢部 Mac 上嘅相關設定會保留。想從另一部 Mac 複製呢啲設定,請用 Vorssaint 3.4 或更新版本重新匯出。其他設定會匯入,之後 App 會重新啟動。",
+        importMissingIslandBody: "呢份備份冇靈動島設定。呢部 Mac 上嘅相關設定會保留。想從另一部 Mac 複製呢啲設定,請用 Vorssaint 3.4 或更新版本重新匯出。其他設定會匯入,之後 App 會重新啟動。",
         importAction: "匯入並重新啟動",
         invalidFile: "此檔案不是有效嘅 Vorssaint 備份。"
     )

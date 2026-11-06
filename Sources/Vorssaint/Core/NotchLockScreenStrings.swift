@@ -97,21 +97,21 @@ extension FeatureStrings {
         case .zhHans: return NotchLockScreenStrings(
             title: "锁屏",
             show: "在锁屏上显示",
-            showHint: "音乐以及计时器、AI 智能体、下载和下一个日程等Dynamic Island活动会显示在密码栏上方。任何能看到你屏幕的人都能读到它们。",
+            showHint: "音乐以及计时器、AI 智能体、下载和下一个日程等灵动岛活动会显示在密码栏上方。任何能看到你屏幕的人都能读到它们。",
             sounds: "锁定和解锁音效",
             soundsHint: "Mac锁定和解锁时播放macOS的挂锁音效。",
             working: "工作中")
         case .zhTW: return NotchLockScreenStrings(
             title: "鎖定畫面",
             show: "在鎖定畫面上顯示",
-            showHint: "音樂以及計時器、AI 代理、下載和下一個行程等Dynamic Island活動會顯示在密碼欄位上方。任何看得到你螢幕的人都能讀到。",
+            showHint: "音樂以及計時器、AI 代理、下載和下一個行程等靈動島活動會顯示在密碼欄位上方。任何看得到你螢幕的人都能讀到。",
             sounds: "鎖定與解鎖音效",
             soundsHint: "Mac鎖定和解鎖時播放macOS的鎖頭音效。",
             working: "工作中")
         case .zhHK: return NotchLockScreenStrings(
             title: "鎖定畫面",
             show: "在鎖定畫面上顯示",
-            showHint: "音樂以及計時器、AI 代理、下載和下一個行程等Dynamic Island活動會顯示在密碼欄位上方。任何看到你螢幕的人都能讀到。",
+            showHint: "音樂以及計時器、AI 代理、下載和下一個行程等靈動島活動會顯示在密碼欄位上方。任何看到你螢幕的人都能讀到。",
             sounds: "鎖定及解鎖音效",
             soundsHint: "Mac鎖定及解鎖時播放macOS的鎖頭音效。",
             working: "工作中")

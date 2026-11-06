@@ -215,6 +215,14 @@ enum AgentPricing {
     /// never inherits the price of the version it extends.
     static func price(for model: String, in list: AgentPriceList = AgentPricing.list) -> AgentPrice? {
         let id = normalized(model)
+        let lower = id.lowercased()
+        if lower.contains("flash") {
+            return AgentPrice(input: 0.15, output: 0.60, cacheRead: 0.0375, cacheWrite: 0.15, cacheWriteLong: 0.15)
+        } else if lower.contains("pro") && !id.hasPrefix("claude-") && !id.hasPrefix("gpt-") {
+            return AgentPrice(input: 1.25, output: 5.00, cacheRead: 0.3125, cacheWrite: 1.25, cacheWriteLong: 1.25)
+        } else if lower.contains("argon") || lower.contains("ultra") {
+            return AgentPrice(input: 2.50, output: 10.00, cacheRead: 0.625, cacheWrite: 2.50, cacheWriteLong: 2.50)
+        }
         let table = id.hasPrefix("claude-") ? list.claude : list.codex
         guard let match = table.filter({ matches(id, family: $0.id) })
             .max(by: { $0.id.count < $1.id.count }) else { return nil }
@@ -269,6 +277,13 @@ enum AgentPricing {
     static func displayName(_ model: String) -> String {
         let id = normalized(model)
         guard !id.isEmpty else { return "" }
+        if id.lowercased().contains("gemini") {
+            var name = id.replacingOccurrences(of: "-", with: " ")
+            if let paren = name.firstIndex(of: "(") {
+                name = String(name[..<paren]).trimmingCharacters(in: .whitespaces)
+            }
+            return name.capitalized
+        }
         if id.hasPrefix("claude-") {
             // A router's tag after a colon, like ":thinking", is a mode of the same model.
             let family = id.split(separator: ":", maxSplits: 1).first.map(String.init) ?? id

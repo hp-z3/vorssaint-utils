@@ -531,8 +531,8 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "提高键盘亮度",
         softwareDimming: "调暗画面",
         extendedDimming: "进一步调暗",
-        islandPromptTitle: "在Dynamic Island中显示亮度？",
-        islandPromptMessage: "只有在“显示器”设置中打开“控制显示器”时，Dynamic Island才会显示亮度变化。",
+        islandPromptTitle: "在灵动岛中显示亮度？",
+        islandPromptMessage: "只有在“显示器”设置中打开“控制显示器”时，灵动岛才会显示亮度变化。",
         islandPromptKeepOff: "保持关闭"
     )
 
@@ -570,8 +570,8 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "提高鍵盤亮度",
         softwareDimming: "調暗畫面",
         extendedDimming: "進一步調暗",
-        islandPromptTitle: "要在Dynamic Island中顯示亮度嗎？",
-        islandPromptMessage: "只有在「顯示器」設定中開啟「控制顯示器」時，Dynamic Island才會顯示亮度變化。",
+        islandPromptTitle: "要在靈動島中顯示亮度嗎？",
+        islandPromptMessage: "只有在「顯示器」設定中開啟「控制顯示器」時，靈動島才會顯示亮度變化。",
         islandPromptKeepOff: "保持關閉"
     )
 
@@ -609,8 +609,8 @@ extension BrightnessFeatureStrings {
         keyboardBrightnessIncrease: "提高鍵盤亮度",
         softwareDimming: "調暗畫面",
         extendedDimming: "進一步調暗",
-        islandPromptTitle: "要在Dynamic Island中顯示亮度嗎？",
-        islandPromptMessage: "只有在「顯示器」設定中開啟「控制顯示器」時，Dynamic Island才會顯示亮度變化。",
+        islandPromptTitle: "要在靈動島中顯示亮度嗎？",
+        islandPromptMessage: "只有在「顯示器」設定中開啟「控制顯示器」時，靈動島才會顯示亮度變化。",
         islandPromptKeepOff: "保持關閉"
     )
     static let uk = BrightnessFeatureStrings(
