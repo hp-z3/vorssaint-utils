@@ -346,12 +346,7 @@ private struct NotchAgentLimitsCard: View {
                                 .accessibilityLabel(account.checkLabel)
                             }
                         } else {
-                            if let plan = snapshot.plans[provider] {
-                                let badgeText = provider == .antigravity
-                                    ? plan.name.replacingOccurrences(of: "Google AI ", with: "")
-                                    : plan.name
-                                NotchAgentChip(text: badgeText, tint: provider.tint)
-                            }
+                            if let plan = snapshot.plans[provider] { NotchAgentChip(text: plan.name, tint: provider.tint) }
                             if !snapshot.working(provider).isEmpty { NotchAgentPulse(tint: provider.tint, size: 5) }
                         }
                     }
