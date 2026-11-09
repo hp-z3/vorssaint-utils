@@ -163,12 +163,12 @@ struct NotchAgentsView: View {
             let limits = manager.limits(for: profileIndex) ?? (isActive ? usage.snapshot.limits[.antigravity] : nil)
             let plan = manager.plan(for: profileIndex) ?? (isActive ? usage.snapshot.plans[.antigravity]?.name : "Google AI Pro")
             return NotchAgentAccount(
-                name: "账号 \(profileIndex)",
+                name: "",
                 limits: limits,
                 plan: plan,
                 checking: manager.isSwitching && !isActive,
                 failure: nil,
-                refreshHint: "点击切换至账号 \(profileIndex)",
+                refreshHint: "点击卡片切换至此账号",
                 checkLabel: "切换账号",
                 refresh: {
                     if !isActive {
@@ -226,10 +226,11 @@ private struct AntigravityContextMenu: View {
                     manager.switchTo(profile: 1)
                 }
             } label: {
+                let name = manager.profile1Email.isEmpty ? "账号 1" : manager.profile1Email
                 if manager.activeProfileIndex == 1 {
-                    Label("账号 1 (当前)\(manager.profile1Email.isEmpty ? "" : " · " + manager.profile1Email)", systemImage: "checkmark")
+                    Label("\(name) (当前)", systemImage: "checkmark")
                 } else {
-                    Text("切换至 账号 1\(manager.profile1Email.isEmpty ? "" : " · " + manager.profile1Email)")
+                    Text("切换至 \(name)")
                 }
             }
             Button {
@@ -237,10 +238,11 @@ private struct AntigravityContextMenu: View {
                     manager.switchTo(profile: 2)
                 }
             } label: {
+                let name = manager.profile2Email.isEmpty ? "账号 2" : manager.profile2Email
                 if manager.activeProfileIndex == 2 {
-                    Label("账号 2 (当前)\(manager.profile2Email.isEmpty ? "" : " · " + manager.profile2Email)", systemImage: "checkmark")
+                    Label("\(name) (当前)", systemImage: "checkmark")
                 } else {
-                    Text("切换至 账号 2\(manager.profile2Email.isEmpty ? "" : " · " + manager.profile2Email)")
+                    Text("切换至 \(name)")
                 }
             }
         }
@@ -344,7 +346,7 @@ private struct NotchAgentLimitsCard: View {
 
     private var antigravityTooltip: String {
         let email = antigravityProfileIndex == 1 ? antigravityManager.profile1Email : antigravityManager.profile2Email
-        let base = "Antigravity · 账号 \(antigravityProfileIndex)" + (email.isEmpty ? "" : " (\(email))")
+        let base = "Antigravity" + (email.isEmpty ? "" : " (\(email))")
         if isAntigravityActive {
             return base + " · 当前正在使用"
         } else {
@@ -375,8 +377,19 @@ private struct NotchAgentLimitsCard: View {
         let windows = windows
         let card = NotchAgentCardChrome {
             VStack(alignment: .leading, spacing: 6) {
-                NotchAgentCardHeader(title: (account?.name ?? accountName).map { provider.displayName + " · " + $0 }
-                                        ?? provider.displayName,
+                let headerTitle: String = {
+                    if provider == .antigravity {
+                        return provider.displayName
+                    }
+                    if let name = account?.name, !name.isEmpty {
+                        return provider.displayName + " · " + name
+                    }
+                    if let accountName, !accountName.isEmpty {
+                        return provider.displayName + " · " + accountName
+                    }
+                    return provider.displayName
+                }()
+                NotchAgentCardHeader(title: headerTitle,
                                      symbol: provider.symbol, tint: provider.tint, provider: provider) {
                     HStack(spacing: 4) {
                         if let account {
