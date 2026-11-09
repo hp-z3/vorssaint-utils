@@ -12,10 +12,36 @@ final class AntigravityAccountManager: ObservableObject {
     @Published private(set) var activeProfileIndex: Int = 1
     @Published private(set) var profile1Email: String = ""
     @Published private(set) var profile2Email: String = ""
+    @Published private(set) var profile1Limits: AgentLimits?
+    @Published private(set) var profile2Limits: AgentLimits?
+    @Published private(set) var profile1Plan: String?
+    @Published private(set) var profile2Plan: String?
     @Published private(set) var isSwitching: Bool = false
 
     var currentEmail: String {
         activeProfileIndex == 1 ? profile1Email : profile2Email
+    }
+
+    func limits(for index: Int) -> AgentLimits? {
+        index == 1 ? profile1Limits : profile2Limits
+    }
+
+    func plan(for index: Int) -> String? {
+        index == 1 ? (profile1Plan ?? "Google AI Pro") : (profile2Plan ?? "Google AI Pro")
+    }
+
+    struct CachedQuota: Codable {
+        struct Window: Codable {
+            let id: String
+            let kind: String
+            let minutes: Int?
+            let scope: String?
+            let usedPercent: Double
+            let resetsAt: Date?
+        }
+        let plan: String
+        let observedAt: Date
+        let windows: [Window]
     }
 
     private static var baseFolder: URL {
@@ -59,20 +85,98 @@ final class AntigravityAccountManager: ObservableObject {
         loadState()
     }
 
+    func updateActiveQuota(windows: [AgentLimitWindow], plan: String) {
+        let now = Date()
+        let cachedWindows = windows.map {
+            CachedQuota.Window(
+                id: $0.id,
+                kind: $0.kind.rawValue,
+                minutes: $0.minutes,
+                scope: $0.scope,
+                usedPercent: $0.usedPercent,
+                resetsAt: $0.resetsAt
+            )
+        }
+        let cached = CachedQuota(plan: plan, observedAt: now, windows: cachedWindows)
+        let folder = profileFolder(for: activeProfileIndex)
+        let file = folder.appendingPathComponent("quota_cache.json")
+        if let data = try? JSONEncoder().encode(cached) {
+            try? data.write(to: file, options: .atomic)
+        }
+
+        let limits = AgentLimits(provider: .antigravity, windows: windows, observedAt: now, source: .account)
+        let updateVars = {
+            if self.activeProfileIndex == 1 {
+                self.profile1Limits = limits
+                self.profile1Plan = plan
+            } else {
+                self.profile2Limits = limits
+                self.profile2Plan = plan
+            }
+        }
+        if Thread.isMainThread {
+            updateVars()
+        } else {
+            DispatchQueue.main.async { updateVars() }
+        }
+    }
+
+    private func loadQuotaCache(for index: Int) -> (AgentLimits, String)? {
+        let file = profileFolder(for: index).appendingPathComponent("quota_cache.json")
+        guard let data = try? Data(contentsOf: file),
+              let cached = try? JSONDecoder().decode(CachedQuota.self, from: data) else {
+            return nil
+        }
+        let windows = cached.windows.map { w in
+            AgentLimitWindow(
+                id: w.id,
+                kind: AgentLimitWindow.Kind(rawValue: w.kind) ?? .session,
+                minutes: w.minutes,
+                scope: w.scope,
+                usedPercent: w.usedPercent,
+                resetsAt: w.resetsAt
+            )
+        }
+        let limits = AgentLimits(provider: .antigravity, windows: windows, observedAt: cached.observedAt, source: .account)
+        return (limits, cached.plan)
+    }
+
     func loadState() {
         let fm = FileManager.default
         try? fm.createDirectory(at: Self.baseFolder, withIntermediateDirectories: true)
+        var newActive = 1
         if let str = try? String(contentsOf: Self.activeFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
            let idx = Int(str), idx == 1 || idx == 2 {
-            activeProfileIndex = idx
+            newActive = idx
         } else {
-            activeProfileIndex = 1
+            newActive = 1
             try? "1".write(to: Self.activeFile, atomically: true, encoding: .utf8)
         }
 
         let currEmail = readCurrentAppEmail() ?? ""
-        profile1Email = readProfileEmail(index: 1) ?? (activeProfileIndex == 1 ? currEmail : "")
-        profile2Email = readProfileEmail(index: 2) ?? (activeProfileIndex == 2 ? currEmail : "")
+        let email1 = readProfileEmail(index: 1) ?? (newActive == 1 ? currEmail : "")
+        let email2 = readProfileEmail(index: 2) ?? (newActive == 2 ? currEmail : "")
+        let quota1 = loadQuotaCache(for: 1)
+        let quota2 = loadQuotaCache(for: 2)
+
+        let updateVars = {
+            self.activeProfileIndex = newActive
+            self.profile1Email = email1
+            self.profile2Email = email2
+            if let (l1, p1) = quota1 {
+                self.profile1Limits = l1
+                self.profile1Plan = p1
+            }
+            if let (l2, p2) = quota2 {
+                self.profile2Limits = l2
+                self.profile2Plan = p2
+            }
+        }
+        if Thread.isMainThread {
+            updateVars()
+        } else {
+            DispatchQueue.main.async { updateVars() }
+        }
     }
 
     func profileFolder(for index: Int) -> URL {
@@ -252,6 +356,7 @@ final class AntigravityAccountManager: ObservableObject {
     /// Switches specifically to a profile index.
     func switchTo(profile targetIndex: Int) {
         guard !isSwitching else { return }
+        guard targetIndex != activeProfileIndex else { return }
         isSwitching = true
 
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in

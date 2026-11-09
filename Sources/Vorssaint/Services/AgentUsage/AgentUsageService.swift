@@ -971,6 +971,7 @@ final class AgentUsageService: ObservableObject {
                 if !windows.isEmpty {
                     self.store.setLimits(AgentLimits(provider: .antigravity, windows: windows, observedAt: Date(), source: .account))
                     self.antigravityPlan = AgentPlan(name: reading.plan, monthlyPrice: nil)
+                    AntigravityAccountManager.shared.updateActiveQuota(windows: windows, plan: reading.plan)
                     self.checkLimits()
                     self.schedulePublish()
                 }

@@ -35,7 +35,7 @@ struct NotchAgentsView: View {
     private var providers: [AgentProvider] {
         let list = [claude ? AgentProvider.claude : nil, codex ? .codex : nil, opencode ? .opencode : nil, copilot ? .copilot : nil, antigravity ? .antigravity : nil].compactMap { $0 }
             .filter { usage.snapshot.seen.contains($0) || ($0 == .codex && !codexAccounts.isEmpty)
-                || ($0 == .claude && !usage.claudeProfile.isDefault) }
+                || ($0 == .claude && !usage.claudeProfile.isDefault) || ($0 == .antigravity) }
         return list.sorted { p1, p2 in
             let w1 = !usage.snapshot.working(p1).isEmpty
             let w2 = !usage.snapshot.working(p2).isEmpty
@@ -126,7 +126,8 @@ struct NotchAgentsView: View {
                 NotchAgentLimitsCard(provider: provider, snapshot: snapshot, now: now,
                                      display: NotchAgentLimitDisplay(rawValue: display) ?? .remaining, text: text,
                                      account: account(tile, now: now),
-                                     accountName: provider == .claude ? claudeAccountName : nil)
+                                     accountName: provider == .claude ? claudeAccountName : nil,
+                                     accountID: tile.accountID)
             }
         case .spend:
             NotchAgentSpendCard(snapshot: snapshot, providers: providers, period: shown, text: text)
@@ -154,6 +155,27 @@ struct NotchAgentsView: View {
                 plan: usage.snapshot.plans[.claude]?.name, checking: usage.claudeAccountChecking,
                 failure: usage.claudeAccountFailure.map(text.claudeCode), refreshHint: strings.refreshHint,
                 checkLabel: strings.check, refresh: usage.checkClaudeAccount)
+        }
+        if tile.provider == .antigravity, let accountID = tile.accountID {
+            let profileIndex = Int(accountID) ?? 1
+            let manager = AntigravityAccountManager.shared
+            let isActive = (manager.activeProfileIndex == profileIndex)
+            let limits = manager.limits(for: profileIndex) ?? (isActive ? usage.snapshot.limits[.antigravity] : nil)
+            let plan = manager.plan(for: profileIndex) ?? (isActive ? usage.snapshot.plans[.antigravity]?.name : "Google AI Pro")
+            return NotchAgentAccount(
+                name: "账号 \(profileIndex)",
+                limits: limits,
+                plan: plan,
+                checking: manager.isSwitching && !isActive,
+                failure: nil,
+                refreshHint: "点击切换至账号 \(profileIndex)",
+                checkLabel: "切换账号",
+                refresh: {
+                    if !isActive {
+                        manager.switchTo(profile: profileIndex)
+                    }
+                }
+            )
         }
         guard let id = tile.accountID, let state = codexAccounts.first(where: { $0.id == id }) else { return nil }
         let strings = FeatureStrings.codexAccounts(l10n.language)
@@ -303,7 +325,32 @@ private struct NotchAgentLimitsCard: View {
     let text: NotchAgentStrings
     var account: NotchAgentAccount? = nil
     var accountName: String? = nil
+    var accountID: String? = nil
     @Environment(\.locale) private var locale
+    @ObservedObject private var antigravityManager = AntigravityAccountManager.shared
+    @State private var isHovered = false
+
+    private var isAntigravityCard: Bool {
+        provider == .antigravity
+    }
+
+    private var antigravityProfileIndex: Int {
+        Int(accountID ?? "1") ?? 1
+    }
+
+    private var isAntigravityActive: Bool {
+        isAntigravityCard && antigravityManager.activeProfileIndex == antigravityProfileIndex
+    }
+
+    private var antigravityTooltip: String {
+        let email = antigravityProfileIndex == 1 ? antigravityManager.profile1Email : antigravityManager.profile2Email
+        let base = "Antigravity · 账号 \(antigravityProfileIndex)" + (email.isEmpty ? "" : " (\(email))")
+        if isAntigravityActive {
+            return base + " · 当前正在使用"
+        } else {
+            return base + " · 点击切换至此账号"
+        }
+    }
 
     private var limits: AgentLimits? {
         guard let account else { return snapshot.limits[provider] }
@@ -337,7 +384,7 @@ private struct NotchAgentLimitsCard: View {
                             // A check waiting its turn shows as one under way.
                             if account.checking {
                                 ProgressView().controlSize(.mini).scaleEffect(0.65).frame(width: 12, height: 12)
-                            } else {
+                            } else if provider != .antigravity {
                                 Button(action: account.refresh) {
                                     Image(systemName: "arrow.clockwise").font(.system(size: 10))
                                 }
@@ -351,7 +398,7 @@ private struct NotchAgentLimitsCard: View {
                         }
                     }
                 }
-                .help(account?.name ?? accountName ?? provider.displayName)
+                .help(isAntigravityCard ? antigravityTooltip : (account?.name ?? accountName ?? provider.displayName))
                 if let account {
                     let notes = NotchAgentSupport.accountNotes(
                         hasWindows: !windows.isEmpty, checking: account.checking, failure: account.failure,
@@ -359,11 +406,23 @@ private struct NotchAgentLimitsCard: View {
                         updated: limits.map { text.updated($0.observedAt.formatted(
                             .relative(presentation: .named, unitsStyle: .abbreviated).locale(locale))) })
                     if let placeholder = notes.placeholder {
-                        Text(placeholder).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+                        if isAntigravityCard {
+                            antigravityPlaceholder(checking: account.checking)
+                        } else {
+                            Text(placeholder).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(2)
+                        }
                     }
-                    if !windows.isEmpty { meters(windows) }
+                    if !windows.isEmpty {
+                        meters(windows)
+                        if isAntigravityCard && !isAntigravityActive {
+                            Text(account.checking ? "正在切换账号..." : "点击卡片切换至此账号")
+                                .font(.system(size: 8.5))
+                                .foregroundStyle(account.checking ? Color.secondary : Color(red: 0.40, green: 0.70, blue: 1.0))
+                                .lineLimit(1)
+                        }
+                    }
                     // What went wrong since the reading shown, or how old it is.
-                    if let note = notes.caption {
+                    if let note = notes.caption, (!isAntigravityCard || isAntigravityActive) {
                         Text(note)
                             .font(.system(size: 8.5))
                             .foregroundStyle(account.failure == nil && !stale ? Color.secondary : Color.orange)
@@ -378,6 +437,40 @@ private struct NotchAgentLimitsCard: View {
             }
         }
         .accessibilityElement(children: .combine)
+        .overlay {
+            if isAntigravityActive {
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .strokeBorder(
+                        LinearGradient(
+                            colors: [
+                                Color(red: 0.45, green: 0.75, blue: 1.0),
+                                Color(red: 0.26, green: 0.52, blue: 0.96)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ),
+                        lineWidth: 1.5
+                    )
+                    .shadow(color: Color(red: 0.35, green: 0.65, blue: 1.0).opacity(0.45), radius: 3)
+            }
+        }
+        .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .onHover { hovering in
+            isHovered = hovering
+            if isAntigravityCard && !isAntigravityActive {
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+        }
+        .onTapGesture {
+            if isAntigravityCard && !isAntigravityActive && !antigravityManager.isSwitching {
+                antigravityManager.switchTo(profile: antigravityProfileIndex)
+            }
+        }
+        .brightness(isHovered && isAntigravityCard && !isAntigravityActive ? 0.04 : 0)
 
         if provider == .antigravity {
             card.contextMenu {
@@ -386,6 +479,34 @@ private struct NotchAgentLimitsCard: View {
         } else {
             card
         }
+    }
+
+    private func antigravityPlaceholder(checking: Bool) -> some View {
+        let email = antigravityProfileIndex == 1 ? antigravityManager.profile1Email : antigravityManager.profile2Email
+        return VStack(alignment: .leading, spacing: 4) {
+            if !email.isEmpty {
+                Text(email)
+                    .font(.system(size: 9.5))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            HStack(spacing: 4) {
+                if checking {
+                    ProgressView().controlSize(.mini)
+                    Text("正在切换账号...")
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                } else {
+                    Image(systemName: "hand.tap")
+                        .font(.system(size: 9.5))
+                    Text("点击卡片切换至此账号")
+                        .font(.system(size: 10))
+                }
+            }
+            .foregroundStyle(Color(red: 0.40, green: 0.70, blue: 1.0))
+            .padding(.top, 2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func meters(_ windows: [AgentLimitWindow]) -> some View {
