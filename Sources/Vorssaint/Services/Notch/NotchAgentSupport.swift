@@ -302,12 +302,6 @@ enum NotchAgentSupport {
                 if provider == .claude, let claudeAccount {
                     return [NotchAgentTile(card: .limits, provider: provider, accountID: claudeAccount)]
                 }
-                if provider == .antigravity {
-                    return [
-                        NotchAgentTile(card: .limits, provider: provider, accountID: "1"),
-                        NotchAgentTile(card: .limits, provider: provider, accountID: "2")
-                    ]
-                }
                 guard provider == .codex, !codexAccounts.isEmpty else { return [NotchAgentTile(card: .limits, provider: provider)] }
                 return codexAccounts.map { NotchAgentTile(card: .limits, provider: provider, accountID: $0) }
             }
